@@ -3,6 +3,106 @@ document.addEventListener("DOMContentLoaded", () => {
   const activitySelect = document.getElementById("activity");
   const signupForm = document.getElementById("signup-form");
   const messageDiv = document.getElementById("message");
+  const adminLoginForm = document.getElementById("admin-login-form");
+  const loginMessageDiv = document.getElementById("login-message");
+  const adminStatusDiv = document.getElementById("admin-status");
+  const adminEmailSpan = document.getElementById("admin-email");
+  const logoutBtn = document.getElementById("logout-btn");
+  const adminLoginContainer = document.getElementById("admin-login-container");
+
+  let sessionToken = null;
+  let isAdmin = false;
+
+  // Check admin status on page load
+  async function checkAdminStatus() {
+    try {
+      const response = await fetch("/admin/status", {
+        headers: {
+          "session_token": sessionToken || ""
+        }
+      });
+      const result = await response.json();
+      
+      if (result.isAdmin) {
+        isAdmin = true;
+        adminEmailSpan.textContent = `Logged in as: ${result.email}`;
+        adminStatusDiv.classList.remove("hidden");
+        adminLoginContainer.classList.add("hidden");
+      } else {
+        isAdmin = false;
+        adminStatusDiv.classList.add("hidden");
+        adminLoginContainer.classList.remove("hidden");
+      }
+      
+      // Refresh activities to show/hide delete buttons
+      fetchActivities();
+    } catch (error) {
+      console.error("Error checking admin status:", error);
+    }
+  }
+
+  // Handle admin login
+  adminLoginForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const email = document.getElementById("admin-email-input").value;
+    const password = document.getElementById("admin-password").value;
+
+    try {
+      const response = await fetch(
+        `/admin/login?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`,
+        {
+          method: "POST"
+        }
+      );
+
+      const result = await response.json();
+
+      if (response.ok) {
+        sessionToken = result.token;
+        loginMessageDiv.textContent = result.message;
+        loginMessageDiv.className = "success";
+        adminLoginForm.reset();
+        
+        // Check admin status to update UI
+        await checkAdminStatus();
+      } else {
+        loginMessageDiv.textContent = result.detail || "Login failed";
+        loginMessageDiv.className = "error";
+      }
+
+      loginMessageDiv.classList.remove("hidden");
+
+      // Hide message after 5 seconds
+      setTimeout(() => {
+        loginMessageDiv.classList.add("hidden");
+      }, 5000);
+    } catch (error) {
+      loginMessageDiv.textContent = "Failed to login. Please try again.";
+      loginMessageDiv.className = "error";
+      loginMessageDiv.classList.remove("hidden");
+      console.error("Error logging in:", error);
+    }
+  });
+
+  // Handle logout
+  logoutBtn.addEventListener("click", async () => {
+    try {
+      const response = await fetch("/admin/logout", {
+        method: "POST",
+        headers: {
+          "session_token": sessionToken || ""
+        }
+      });
+
+      if (response.ok) {
+        sessionToken = null;
+        await checkAdminStatus();
+      }
+    } catch (error) {
+      console.error("Error logging out:", error);
+    }
+  });
 
   // Function to fetch activities from API
   async function fetchActivities() {
@@ -30,7 +130,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 ${details.participants
                   .map(
                     (email) =>
-                      `<li><span class="participant-email">${email}</span><button class="delete-btn" data-activity="${name}" data-email="${email}">❌</button></li>`
+                      `<li><span class="participant-email">${email}</span>${
+                        isAdmin
+                          ? `<button class="delete-btn" data-activity="${name}" data-email="${email}">❌</button>`
+                          : ""
+                      }</li>`
                   )
                   .join("")}
               </ul>
@@ -80,6 +184,9 @@ document.addEventListener("DOMContentLoaded", () => {
         )}/unregister?email=${encodeURIComponent(email)}`,
         {
           method: "DELETE",
+          headers: {
+            "session_token": sessionToken || ""
+          }
         }
       );
 
@@ -156,5 +263,6 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // Initialize app
+  checkAdminStatus();
   fetchActivities();
 });

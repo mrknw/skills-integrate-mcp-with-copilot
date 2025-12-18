@@ -10,9 +10,29 @@
     <header>
       <h1>Mergington High School</h1>
       <h2>Extracurricular Activities</h2>
+      <div id="admin-status" class="hidden">
+        <span id="admin-email"></span> | <button id="logout-btn">Logout</button>
+      </div>
     </header>
 
     <main>
+      <!-- Admin Login Section -->
+      <section id="admin-login-container">
+        <h3>Admin Login</h3>
+        <form id="admin-login-form">
+          <div class="form-group">
+            <label for="admin-email-input">Email:</label>
+            <input type="email" id="admin-email-input" required placeholder="teacher@mergington.edu" />
+          </div>
+          <div class="form-group">
+            <label for="admin-password">Password:</label>
+            <input type="password" id="admin-password" required placeholder="Password" />
+          </div>
+          <button type="submit">Login</button>
+        </form>
+        <div id="login-message" class="hidden"></div>
+      </section>
+
       <section id="activities-container">
         <h3>Available Activities</h3>
         <div id="activities-list">
